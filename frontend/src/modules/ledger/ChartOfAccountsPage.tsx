@@ -52,7 +52,7 @@ const ChartOfAccountsPage = () => {
     <div>
       <Title level={4}>会计科目表</Title>
       <Text type="secondary">项目内所有会计科目</Text>
-      <Card className="mt-4">
+      <Card className="mt-4 rounded-xl shadow-card">
         <Table
           dataSource={accounts}
           columns={columns}
@@ -60,6 +60,7 @@ const ChartOfAccountsPage = () => {
           loading={loading}
           pagination={{ pageSize: 50 }}
           size="small"
+          className="rounded-lg overflow-hidden border border-slate-200"
         />
       </Card>
     </div>

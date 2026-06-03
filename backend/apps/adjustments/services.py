@@ -1,29 +1,32 @@
 from decimal import Decimal
 from django.db import transaction
 from django.db.models import Sum
-from apps.ledger.models import Account, LedgerEntry
+from apps.ledger.models import Account
+from apps.imports.models import ImportBatch, UnauditedTB
 from apps.trial_balance.models import TrialBalanceSnapshot
-from .models import AdjustingEntry, AdjustmentLine
+from .models import AdjustmentLine
 
 
 @transaction.atomic
 def recalculate_trial_balance(project_id: int):
     """
     Recalculate the trial balance for a project by aggregating
-    ledger entries and posted adjusting entries per account.
+    the active unaudited TB and posted adjusting entries per account.
     """
-    # 1. Aggregate ledger entries per account
-    ledger_sums = LedgerEntry.objects.filter(project_id=project_id).values('account').annotate(
-        total_debit=Sum('debit'),
-        total_credit=Sum('credit')
-    )
-    ledger_map = {
-        item['account']: {
-            'debit': item['total_debit'] or Decimal('0'),
-            'credit': item['total_credit'] or Decimal('0'),
-        }
-        for item in ledger_sums
-    }
+    # 1. Get active unaudited TB rows
+    active_batch = ImportBatch.objects.filter(
+        project_id=project_id, is_active=True, import_type='tb'
+    ).first()
+
+    tb_map = {}
+    if active_batch:
+        for row in active_batch.tb_rows.all():
+            tb_map[row.account_code] = {
+                'opening_debit': row.opening_debit,
+                'opening_credit': row.opening_credit,
+                'period_debit': row.period_debit,
+                'period_credit': row.period_credit,
+            }
 
     # 2. Aggregate posted adjustment lines per account
     adjustment_sums = AdjustmentLine.objects.filter(
@@ -48,13 +51,17 @@ def recalculate_trial_balance(project_id: int):
     total_credit = Decimal('0')
 
     for account in accounts:
-        ledger_debit = ledger_map.get(account.id, {}).get('debit', Decimal('0'))
-        ledger_credit = ledger_map.get(account.id, {}).get('credit', Decimal('0'))
+        tb_data = tb_map.get(account.code, {})
+        opening_debit = tb_data.get('opening_debit', Decimal('0'))
+        opening_credit = tb_data.get('opening_credit', Decimal('0'))
+        period_debit = tb_data.get('period_debit', Decimal('0'))
+        period_credit = tb_data.get('period_credit', Decimal('0'))
+
         adj_debit = adjustment_map.get(account.id, {}).get('debit', Decimal('0'))
         adj_credit = adjustment_map.get(account.id, {}).get('credit', Decimal('0'))
 
-        adjusted_debit = ledger_debit + adj_debit
-        adjusted_credit = ledger_credit + adj_credit
+        adjusted_debit = opening_debit + period_debit + adj_debit
+        adjusted_credit = opening_credit + period_credit + adj_credit
 
         total_debit += adjusted_debit
         total_credit += adjusted_credit
@@ -63,8 +70,10 @@ def recalculate_trial_balance(project_id: int):
             project_id=project_id,
             account=account,
             defaults={
-                'period_movement_debit': ledger_debit,
-                'period_movement_credit': ledger_credit,
+                'opening_debit': opening_debit,
+                'opening_credit': opening_credit,
+                'period_movement_debit': period_debit,
+                'period_movement_credit': period_credit,
                 'adjusted_debit': adjusted_debit,
                 'adjusted_credit': adjusted_credit,
             }

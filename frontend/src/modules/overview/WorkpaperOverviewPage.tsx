@@ -56,41 +56,41 @@ const WorkpaperOverviewPage = () => {
           type="info"
           showIcon
           icon={<ExclamationCircleOutlined />}
-          className="mb-6"
+          className="mb-6 rounded-lg shadow-sm"
         />
       )}
 
       <Row gutter={[24, 24]}>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card className="rounded-xl shadow-card border-l-4 border-primary hover:shadow-card-hover transition-all">
             <Statistic
               title="底稿总数"
               value={totalWorkpapers}
-              prefix={<FileTextOutlined className="text-blue-500" />}
+              prefix={<FileTextOutlined className="text-primary" />}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card className="rounded-xl shadow-card border-l-4 border-success hover:shadow-card-hover transition-all">
             <Statistic
               title="账簿分录"
               value={overview.ledger_entry_count}
-              prefix={<BookOutlined className="text-green-500" />}
+              prefix={<BookOutlined className="text-success" />}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card className="rounded-xl shadow-card border-l-4 border-warning hover:shadow-card-hover transition-all">
             <Statistic
               title="待处理调整"
               value={overview.open_adjustments}
-              prefix={<EditOutlined className="text-orange-500" />}
-              valueStyle={{ color: overview.open_adjustments > 0 ? '#fa8c16' : '#52c41a' }}
+              prefix={<EditOutlined className="text-warning" />}
+              valueStyle={{ color: overview.open_adjustments > 0 ? '#f59e0b' : '#10b981' }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card className="rounded-xl shadow-card border-l-4 border-purple-500 hover:shadow-card-hover transition-all">
             <Statistic
               title="已审定"
               value={finalisedCount}
@@ -102,7 +102,7 @@ const WorkpaperOverviewPage = () => {
 
       <Row gutter={[24, 24]} className="mt-6">
         <Col xs={24} lg={12}>
-          <Card title="底稿完成进度">
+          <Card title="底稿完成进度" className="rounded-xl shadow-card">
             <div className="flex items-center justify-center py-8">
               <Progress
                 type="circle"
@@ -129,7 +129,7 @@ const WorkpaperOverviewPage = () => {
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="项目信息">
+          <Card title="项目信息" className="rounded-xl shadow-card">
             <div className="space-y-4">
               <div className="flex justify-between py-2 border-b border-gray-100">
                 <Text type="secondary">客户名称</Text>

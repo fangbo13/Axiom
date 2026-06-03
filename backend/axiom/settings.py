@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'apps.a300_checks',
     'apps.notes',
     'apps.exports',
+    'apps.imports',
 ]
 
 MIDDLEWARE = [

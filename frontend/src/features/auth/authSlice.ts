@@ -20,6 +20,26 @@ const initialState: AuthState = {
   error: null,
 }
 
+function extractErrorMessage(error: any): string {
+  const data = error.response?.data
+  if (!data) return '网络请求失败'
+  // Handle our custom exception wrapper: { code, message, details }
+  if (data.details) {
+    if (typeof data.details === 'string') return data.details
+    if (data.details.detail) return data.details.detail
+    // Extract first validation error
+    const firstKey = Object.keys(data.details)[0]
+    if (firstKey) {
+      const val = data.details[firstKey]
+      if (Array.isArray(val)) return `${firstKey}: ${val[0]}`
+      if (typeof val === 'string') return `${firstKey}: ${val}`
+    }
+  }
+  if (data.detail) return data.detail
+  if (data.message && data.message !== '请求处理失败') return data.message
+  return '操作失败，请检查输入内容'
+}
+
 export const login = createAsyncThunk(
   'auth/login',
   async (credentials: LoginCredentials, { rejectWithValue }) => {
@@ -27,7 +47,7 @@ export const login = createAsyncThunk(
       const response = await authApi.login(credentials)
       return response.data
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.detail || '登录失败')
+      return rejectWithValue(extractErrorMessage(error))
     }
   }
 )
@@ -39,7 +59,7 @@ export const register = createAsyncThunk(
       const response = await authApi.register(data)
       return response.data
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.detail || '注册失败')
+      return rejectWithValue(extractErrorMessage(error))
     }
   }
 )
@@ -51,7 +71,7 @@ export const fetchCurrentUser = createAsyncThunk(
       const response = await authApi.me()
       return response.data
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.detail || '获取用户信息失败')
+      return rejectWithValue(extractErrorMessage(error))
     }
   }
 )

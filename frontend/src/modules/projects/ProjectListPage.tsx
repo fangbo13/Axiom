@@ -111,7 +111,7 @@ const ProjectListPage = () => {
             <Col xs={24} sm={12} lg={8} key={project.id}>
               <Card
                 hoverable
-                className="h-full transition-shadow hover:shadow-lg"
+                className="h-full rounded-xl shadow-card hover:shadow-card-hover transition-all duration-300"
                 onClick={() => handleEnterProject(project)}
               >
                 <div className="flex items-start justify-between mb-4">

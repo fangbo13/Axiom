@@ -55,7 +55,7 @@ const A300ChecksPage = () => {
           description="当前项目的勾稽关系全部正确。"
           type="success"
           showIcon
-          className="mb-4"
+          className="mb-4 rounded-lg shadow-sm"
         />
       )}
 
@@ -65,7 +65,7 @@ const A300ChecksPage = () => {
           description="请查看下方明细，修复数据不一致问题。"
           type="error"
           showIcon
-          className="mb-4"
+          className="mb-4 rounded-lg shadow-sm"
         />
       )}
 
@@ -80,12 +80,13 @@ const A300ChecksPage = () => {
           renderItem={(check) => (
             <List.Item>
               <Card
+                className="rounded-xl shadow-card hover:shadow-card-hover transition-all"
                 title={
                   <div className="flex items-center gap-2">
                     {check.passed ? (
-                      <CheckCircleOutlined className="text-green-500 text-lg" />
+                      <CheckCircleOutlined className="text-success text-lg" />
                     ) : (
-                      <CloseCircleOutlined className="text-red-500 text-lg" />
+                      <CloseCircleOutlined className="text-error text-lg" />
                     )}
                     <span>{check.rule_name}</span>
                     <Tag color={check.passed ? 'success' : 'error'}>

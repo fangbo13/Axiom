@@ -34,8 +34,10 @@ const ProjectLayout = () => {
       <ProjectSidebar />
       <Layout>
         <ProjectHeader />
-        <Content className="m-6 p-6 bg-white rounded-lg shadow-sm">
-          <Outlet />
+        <Content className="m-4 p-0">
+          <div className="bg-white rounded-xl shadow-card border border-slate-100 p-6 min-h-[calc(100vh-140px)]">
+            <Outlet />
+          </div>
         </Content>
       </Layout>
     </Layout>

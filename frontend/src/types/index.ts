@@ -77,3 +77,65 @@ export interface A300CheckResult {
   details: Record<string, number | string>;
   message: string;
 }
+
+export interface ImportBatch {
+  id: number;
+  project: number;
+  uploaded_by: User;
+  file_name: string;
+  import_type: 'tb' | 'je';
+  status: 'uploaded' | 'preview' | 'validated' | 'committed' | 'failed';
+  overwrite_mode: 'append' | 'replace';
+  period: string;
+  version: number;
+  is_active: boolean;
+  total_rows: number;
+  parsed_rows: number;
+  error_rows_count: number;
+  metadata: Record<string, any>;
+  validation_summary: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PreviewData {
+  batch_id: number;
+  file_name: string;
+  import_type: 'tb' | 'je';
+  overwrite_mode: 'append' | 'replace';
+  detected_columns: string[];
+  guessed_mapping: Record<string, string>;
+  total_rows: number;
+  first_rows: Record<string, any>[];
+  sample_rows: Record<string, any>[];
+}
+
+export interface ValidationResult {
+  batch_id: number;
+  is_valid: boolean;
+  summary: {
+    total_rows: number;
+    parsed_rows: number;
+    error_rows: number;
+  };
+  checks: Record<string, { passed: boolean; message: string }>;
+  errors: Array<{
+    row_number: number | null;
+    error_type: string;
+    error_message: string;
+    raw_data: Record<string, any>;
+  }>;
+}
+
+export interface ImportErrorRow {
+  id: number;
+  import_batch: number;
+  row_number: number;
+  raw_data: Record<string, any>;
+  error_type: string;
+  error_message: string;
+  is_resolved: boolean;
+  resolved_data: Record<string, any> | null;
+  created_at: string;
+  updated_at: string;
+}

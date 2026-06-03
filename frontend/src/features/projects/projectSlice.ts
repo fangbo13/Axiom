@@ -18,15 +18,33 @@ const initialState: ProjectState = {
   error: null,
 }
 
+function extractErrorMessage(error: any): string {
+  const data = error.response?.data
+  if (!data) return '网络请求失败'
+  if (data.details) {
+    if (typeof data.details === 'string') return data.details
+    if (data.details.detail) return data.details.detail
+    const firstKey = Object.keys(data.details)[0]
+    if (firstKey) {
+      const val = data.details[firstKey]
+      if (Array.isArray(val)) return `${firstKey}: ${val[0]}`
+      if (typeof val === 'string') return `${firstKey}: ${val}`
+    }
+  }
+  if (data.detail) return data.detail
+  if (data.message && data.message !== '请求处理失败') return data.message
+  return '操作失败，请检查输入内容'
+}
+
 export const fetchProjects = createAsyncThunk(
   'projects/fetchProjects',
   async (_, { rejectWithValue }) => {
     try {
       const response = await projectApi.list()
       // DRF paginated response
-      return Array.isArray(response.data) ? response.data : response.data.results || []
+      return Array.isArray(response.data) ? response.data : (response.data as any).results || []
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.detail || '获取项目列表失败')
+      return rejectWithValue(extractErrorMessage(error))
     }
   }
 )
@@ -38,7 +56,7 @@ export const createProject = createAsyncThunk(
       const response = await projectApi.create(data)
       return response.data
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.detail || '创建项目失败')
+      return rejectWithValue(extractErrorMessage(error))
     }
   }
 )
@@ -50,7 +68,7 @@ export const fetchOverview = createAsyncThunk(
       const response = await projectApi.overview(projectId)
       return response.data
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.detail || '获取概览失败')
+      return rejectWithValue(extractErrorMessage(error))
     }
   }
 )

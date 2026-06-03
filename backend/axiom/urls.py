@@ -14,6 +14,7 @@ urlpatterns = [
     path('api/projects/<int:project_id>/a300/', include('apps.a300_checks.urls')),
     path('api/projects/<int:project_id>/notes/', include('apps.notes.urls')),
     path('api/projects/<int:project_id>/export/', include('apps.exports.urls')),
+    path('api/projects/<int:project_id>/imports/', include('apps.imports.urls')),
     path('api/admin/', include('apps.accounts.admin_urls')),
 ]
 

@@ -20,6 +20,24 @@ const initialState: LedgerState = {
   error: null,
 }
 
+function extractErrorMessage(error: any): string {
+  const data = error.response?.data
+  if (!data) return '网络请求失败'
+  if (data.details) {
+    if (typeof data.details === 'string') return data.details
+    if (data.details.detail) return data.details.detail
+    const firstKey = Object.keys(data.details)[0]
+    if (firstKey) {
+      const val = data.details[firstKey]
+      if (Array.isArray(val)) return `${firstKey}: ${val[0]}`
+      if (typeof val === 'string') return `${firstKey}: ${val}`
+    }
+  }
+  if (data.detail) return data.detail
+  if (data.message && data.message !== '请求处理失败') return data.message
+  return '操作失败，请检查输入内容'
+}
+
 export const fetchAccounts = createAsyncThunk(
   'ledger/fetchAccounts',
   async (projectId: number, { rejectWithValue }) => {
@@ -27,7 +45,7 @@ export const fetchAccounts = createAsyncThunk(
       const response = await ledgerApi.getAccounts(projectId)
       return response.data
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.detail || '获取科目失败')
+      return rejectWithValue(extractErrorMessage(error))
     }
   }
 )
@@ -39,7 +57,7 @@ export const fetchEntries = createAsyncThunk(
       const response = await ledgerApi.getEntries(projectId, params)
       return response.data.results
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.detail || '获取分录失败')
+      return rejectWithValue(extractErrorMessage(error))
     }
   }
 )
@@ -51,7 +69,7 @@ export const uploadLedgerFile = createAsyncThunk(
       const response = await ledgerApi.uploadFile(projectId, file)
       return response.data
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.detail || '上传失败')
+      return rejectWithValue(extractErrorMessage(error))
     }
   }
 )

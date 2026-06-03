@@ -12,6 +12,7 @@ import {
   AuditOutlined,
   DownloadOutlined,
   ArrowLeftOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store'
@@ -21,6 +22,7 @@ const { Sider } = Layout
 const menuItems = [
   { key: 'overview', icon: <DashboardOutlined />, label: '底稿总览' },
   { key: 'ledger/import', icon: <BookOutlined />, label: '导入账簿' },
+  { key: 'ledger/versions', icon: <HistoryOutlined />, label: '导入版本' },
   { key: 'workpapers', icon: <FileTextOutlined />, label: '审计底稿' },
   { key: 'adjustments', icon: <EditOutlined />, label: '调整分录' },
   { key: 'trial-balance', icon: <BarChartOutlined />, label: '试算平衡' },

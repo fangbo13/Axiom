@@ -4,15 +4,18 @@ import { Spin } from 'antd'
 import AppLayout from '@/components/Layout/AppLayout'
 import ProjectLayout from '@/components/Layout/ProjectLayout'
 import ProtectedRoute from '@/components/ProtectedRoute'
+import ErrorBoundary from '@/components/ErrorBoundary'
 
 const LoginPage = lazy(() => import('@/modules/auth/LoginPage'))
 const RegisterPage = lazy(() => import('@/modules/auth/RegisterPage'))
 const ProjectListPage = lazy(() => import('@/modules/projects/ProjectListPage'))
 const WorkpaperOverviewPage = lazy(() => import('@/modules/overview/WorkpaperOverviewPage'))
-const ImportLedgerPage = lazy(() => import('@/modules/ledger/ImportLedgerPage'))
+const ImportPage = lazy(() => import('@/modules/imports/ImportPage'))
+const VersionManagementPage = lazy(() => import('@/modules/imports/VersionManagementPage'))
 const ChartOfAccountsPage = lazy(() => import('@/modules/ledger/ChartOfAccountsPage'))
 const A300ChecksPage = lazy(() => import('@/modules/a300/A300ChecksPage'))
 const AdminDashboard = lazy(() => import('@/modules/admin/AdminDashboard'))
+const NotFoundPage = lazy(() => import('@/modules/errors/NotFoundPage'))
 
 const PageLoader = () => (
   <div className="flex items-center justify-center h-screen">
@@ -55,7 +58,9 @@ export const router = createBrowserRouter([
         path: 'projects/:projectId',
         element: (
           <ProtectedRoute>
-            <ProjectLayout />
+            <ErrorBoundary>
+              <ProjectLayout />
+            </ErrorBoundary>
           </ProtectedRoute>
         ),
         children: [
@@ -75,7 +80,15 @@ export const router = createBrowserRouter([
             path: 'ledger/import',
             element: (
               <Suspense fallback={<PageLoader />}>
-                <ImportLedgerPage />
+                <ImportPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'ledger/versions',
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <VersionManagementPage />
               </Suspense>
             ),
           },
@@ -104,6 +117,14 @@ export const router = createBrowserRouter([
             ),
           },
         ],
+      },
+      {
+        path: '*',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <NotFoundPage />
+          </Suspense>
+        ),
       },
     ],
   },
