@@ -29,28 +29,6 @@ Axiom 是一款面向审计团队的智能工作底稿管理平台，提供从�
 
 ---
 
-## 界面预览
-
-### 登录页
-
-![登录页](./screenshot_login.png)
-
-### 项目列表
-
-![项目列表](./screenshot_projects.png)
-
-### 工作底稿概览
-
-![工作底稿概览](./screenshot_overview.png)
-
-### 账簿导入
-
-![账簿导入](./screenshot_import.png)
-
-![导入预览与映射](./screenshot_import2.png)
-
----
-
 ## 快速启动
 
 ### 后端
