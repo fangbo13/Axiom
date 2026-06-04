@@ -1,6 +1,7 @@
 import { Card, Typography, Space, Tag, Alert, Button, Table, Statistic, Row, Col } from 'antd'
-import { CheckCircleOutlined, CloseCircleOutlined, WarningOutlined, ArrowRightOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, CloseCircleOutlined, WarningOutlined, ArrowRightOutlined, DownloadOutlined } from '@ant-design/icons'
 import type { ValidationResult } from '@/types'
+import importsApi from '@/api/importsApi'
 
 const { Text } = Typography
 
@@ -8,10 +9,11 @@ interface ValidationStepProps {
   validationResult: ValidationResult
   onProceed: () => void
   onFixErrors: () => void
+  projectId: number
 }
 
-const ValidationStep = ({ validationResult, onProceed, onFixErrors }: ValidationStepProps) => {
-  const { is_valid, summary, checks, errors } = validationResult
+const ValidationStep = ({ validationResult, onProceed, onFixErrors, projectId }: ValidationStepProps) => {
+  const { is_valid, summary, checks, errors, warnings } = validationResult
 
   const checkItems = Object.entries(checks).map(([key, value]) => ({
     key,
@@ -21,29 +23,58 @@ const ValidationStep = ({ validationResult, onProceed, onFixErrors }: Validation
       duplicate_accounts: '重复科目检测',
       period_consistency: '期间一致性',
       voucher_uniqueness: '凭证唯一性',
+      direction_check: '方向异常检查',
+      closing_calculation: '期末计算校验',
+      foreign_currency: '外币校验',
     }[key] || key,
     ...value,
   }))
 
   const errorColumns = [
     { title: '行号', dataIndex: 'row_number', key: 'row_number', width: 80 },
-    { title: '错误类型', dataIndex: 'error_type', key: 'error_type', width: 120,
+    { title: '类型', dataIndex: 'severity', key: 'severity', width: 90,
+      render: (severity: string) => (
+        <Tag color={severity === 'error' ? 'red' : 'orange'}>
+          {severity === 'error' ? '错误' : '警告'}
+        </Tag>
+      )
+    },
+    { title: '错误类型', dataIndex: 'error_type', key: 'error_type', width: 140,
       render: (type: string) => {
         const colorMap: Record<string, string> = {
           format: 'orange',
           balance: 'red',
           duplicate: 'volcano',
           consistency: 'magenta',
+          direction_mismatch: 'gold',
+          closing_calculation: 'cyan',
+          foreign_currency: 'blue',
           other: 'default',
         }
         return <Tag color={colorMap[type] || 'default'}>{type}</Tag>
       }
     },
-    { title: '错误信息', dataIndex: 'error_message', key: 'error_message' },
+    { title: '信息', dataIndex: 'error_message', key: 'error_message' },
   ]
 
-  const hasErrors = errors.length > 0
-  const unresolvedErrors = errors.filter((e) => e.row_number !== null)
+  const allIssues = [
+    ...(errors || []).map(e => ({ ...e, severity: e.severity || 'error' })),
+    ...(warnings || []).map(w => ({ ...w, severity: w.severity || 'warning' })),
+  ]
+
+  const hasErrors = (errors || []).length > 0
+  const hasWarnings = (warnings || []).length > 0
+
+  const handleExportErrors = () => {
+    if (!validationResult.batch_id) return
+    importsApi.exportErrorRows(projectId, validationResult.batch_id)
+      .then(() => {
+        // File download handled by browser
+      })
+      .catch(() => {
+        // Error handling
+      })
+  }
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -64,6 +95,15 @@ const ValidationStep = ({ validationResult, onProceed, onFixErrors }: Validation
               title="错误行数"
               value={summary.error_rows}
               valueStyle={{ color: hasErrors ? '#ef4444' : '#10b981' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={8} lg={4}>
+          <Card size="small" className={`rounded-xl shadow-card border-l-4 ${hasWarnings ? 'border-warning' : 'border-success'}`}>
+            <Statistic
+              title="警告行数"
+              value={summary.warning_rows || 0}
+              valueStyle={{ color: hasWarnings ? '#f59e0b' : '#10b981' }}
             />
           </Card>
         </Col>
@@ -100,6 +140,17 @@ const ValidationStep = ({ validationResult, onProceed, onFixErrors }: Validation
         <Alert
           message="导入存在错误"
           description={`共有 ${summary.error_rows} 行数据校验失败，请在下表中查看详情。您可以修正错误后重新校验，或直接前往提交步骤（不推荐）。`}
+          type="error"
+          showIcon
+          icon={<WarningOutlined />}
+          className="rounded-lg"
+        />
+      )}
+
+      {hasWarnings && !hasErrors && (
+        <Alert
+          message="导入存在警告"
+          description={`共有 ${summary.warning_rows} 行数据存在警告（如方向异常、期末计算差异等），不影响提交，但建议核对。`}
           type="warning"
           showIcon
           icon={<WarningOutlined />}
@@ -107,12 +158,22 @@ const ValidationStep = ({ validationResult, onProceed, onFixErrors }: Validation
         />
       )}
 
-      {unresolvedErrors.length > 0 && (
-        <Card className="rounded-xl shadow-card" title="错误明细">
+      {allIssues.length > 0 && (
+        <Card
+          className="rounded-xl shadow-card"
+          title={
+            <div className="flex items-center justify-between">
+              <span>错误/警告明细</span>
+              <Button size="small" icon={<DownloadOutlined />} onClick={handleExportErrors}>
+                导出Excel
+              </Button>
+            </div>
+          }
+        >
           <Table
-            dataSource={unresolvedErrors}
+            dataSource={allIssues}
             columns={errorColumns}
-            rowKey={(record) => `error-${record.row_number}-${record.error_type}`}
+            rowKey={(record, idx) => `issue-${record.row_number}-${record.error_type}-${idx}`}
             pagination={{ pageSize: 10, simple: true }}
             size="small"
             className="rounded-lg overflow-hidden border border-slate-200"

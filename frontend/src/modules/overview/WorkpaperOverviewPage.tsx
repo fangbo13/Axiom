@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import {
   Card,
@@ -26,6 +26,7 @@ const { Title, Text } = Typography
 
 const WorkpaperOverviewPage = () => {
   const { projectId } = useParams<{ projectId: string }>()
+  const navigate = useNavigate()
   const dispatch = useDispatch<AppDispatch>()
   const { overview, loading } = useSelector((state: RootState) => state.projects)
 
@@ -42,6 +43,9 @@ const WorkpaperOverviewPage = () => {
   const totalWorkpapers = overview.workpaper_total || 0
   const finalisedCount = overview.workpaper_by_status?.finalised || 0
   const completionPercent = totalWorkpapers > 0 ? Math.round((finalisedCount / totalWorkpapers) * 100) : 0
+  const importedTb = overview.imported_tb_count || 0
+  const importedJe = overview.imported_je_count || 0
+  const importedTotal = importedTb + importedJe
 
   return (
     <div>
@@ -71,12 +75,18 @@ const WorkpaperOverviewPage = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className="rounded-xl shadow-card border-l-4 border-success hover:shadow-card-hover transition-all">
+          <Card
+            className="rounded-xl shadow-card border-l-4 border-success hover:shadow-card-hover transition-all cursor-pointer"
+            onClick={() => navigate(`/projects/${projectId}/ledger/import`)}
+          >
             <Statistic
-              title="账簿分录"
-              value={overview.ledger_entry_count}
+              title="已导入账簿"
+              value={importedTotal}
               prefix={<BookOutlined className="text-success" />}
             />
+            <div className="mt-1 text-xs text-gray-500">
+              科目余额表 {importedTb} / 序时账 {importedJe}
+            </div>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>

@@ -33,6 +33,8 @@ export interface ProjectOverview {
   workpaper_by_status: Record<string, number>;
   ledger_entry_count: number;
   open_adjustments: number;
+  imported_tb_count: number;
+  imported_je_count: number;
 }
 
 export interface Account {
@@ -84,7 +86,7 @@ export interface ImportBatch {
   uploaded_by: User;
   file_name: string;
   import_type: 'tb' | 'je';
-  status: 'uploaded' | 'preview' | 'validated' | 'committed' | 'failed';
+  status: 'uploaded' | 'preview' | 'validated' | 'committed' | 'failed' | 'processing';
   overwrite_mode: 'append' | 'replace';
   period: string;
   version: number;
@@ -92,6 +94,7 @@ export interface ImportBatch {
   total_rows: number;
   parsed_rows: number;
   error_rows_count: number;
+  warning_rows_count: number;
   metadata: Record<string, any>;
   validation_summary: Record<string, any>;
   created_at: string;
@@ -108,6 +111,11 @@ export interface PreviewData {
   total_rows: number;
   first_rows: Record<string, any>[];
   sample_rows: Record<string, any>[];
+  detected_header_row?: number;
+  header_confidence?: number;
+  is_multiline_header?: boolean;
+  detected_currencies?: string[];
+  existing_batches?: Array<{ id: number; version: number; file_name: string; is_active: boolean }>;
 }
 
 export interface ValidationResult {
@@ -117,6 +125,7 @@ export interface ValidationResult {
     total_rows: number;
     parsed_rows: number;
     error_rows: number;
+    warning_rows?: number;
   };
   checks: Record<string, { passed: boolean; message: string }>;
   errors: Array<{
@@ -124,6 +133,14 @@ export interface ValidationResult {
     error_type: string;
     error_message: string;
     raw_data: Record<string, any>;
+    severity?: string;
+  }>;
+  warnings?: Array<{
+    row_number: number | null;
+    error_type: string;
+    error_message: string;
+    raw_data: Record<string, any>;
+    severity?: string;
   }>;
 }
 
@@ -134,8 +151,43 @@ export interface ImportErrorRow {
   raw_data: Record<string, any>;
   error_type: string;
   error_message: string;
+  severity: 'error' | 'warning';
   is_resolved: boolean;
   resolved_data: Record<string, any> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MappingTemplate {
+  id: number;
+  project: number;
+  name: string;
+  import_type: 'tb' | 'je';
+  file_extensions: string[];
+  header_signature: Record<string, any>;
+  column_mapping: Record<string, string>;
+  is_auto_saved: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ImportLog {
+  id: number;
+  project: number;
+  import_batch: number | null;
+  action: string;
+  performed_by: User;
+  details: Record<string, any>;
+  created_at: string;
+}
+
+export interface Currency {
+  id: number;
+  project: number;
+  code: string;
+  name: string;
+  is_base: boolean;
+  exchange_rate: string;
   created_at: string;
   updated_at: string;
 }

@@ -35,12 +35,15 @@ class ProjectOverviewSerializer(serializers.ModelSerializer):
     workpaper_by_status = serializers.SerializerMethodField()
     ledger_entry_count = serializers.SerializerMethodField()
     open_adjustments = serializers.SerializerMethodField()
+    imported_tb_count = serializers.SerializerMethodField()
+    imported_je_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
         fields = [
             'id', 'name', 'client_name', 'fiscal_year_end', 'status',
-            'workpaper_total', 'workpaper_by_status', 'ledger_entry_count', 'open_adjustments'
+            'workpaper_total', 'workpaper_by_status', 'ledger_entry_count', 'open_adjustments',
+            'imported_tb_count', 'imported_je_count',
         ]
 
     def get_workpaper_total(self, obj):
@@ -60,3 +63,13 @@ class ProjectOverviewSerializer(serializers.ModelSerializer):
         if not hasattr(obj, 'adjusting_entries'):
             return 0
         return obj.adjusting_entries.exclude(status='posted').count()
+
+    def get_imported_tb_count(self, obj):
+        if hasattr(obj, 'import_batches'):
+            return obj.import_batches.filter(import_type='tb', status='committed').count()
+        return 0
+
+    def get_imported_je_count(self, obj):
+        if hasattr(obj, 'import_batches'):
+            return obj.import_batches.filter(import_type='je', status='committed').count()
+        return 0

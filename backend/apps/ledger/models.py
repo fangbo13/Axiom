@@ -45,6 +45,29 @@ class Account(models.Model):
         return f"{self.code} - {self.name}"
 
 
+class Currency(TimestampedModel):
+    project = models.ForeignKey(
+        'projects.Project',
+        on_delete=models.CASCADE,
+        related_name='currencies',
+        verbose_name='项目'
+    )
+    code = models.CharField(max_length=10, verbose_name='币种代码')
+    name = models.CharField(max_length=50, verbose_name='币种名称')
+    is_base = models.BooleanField(default=False, verbose_name='是否本位币')
+    exchange_rate = models.DecimalField(max_digits=18, decimal_places=6, default=1, verbose_name='汇率')
+
+    class Meta:
+        db_table = 'ledger_currency'
+        verbose_name = '币种'
+        verbose_name_plural = '币种'
+        unique_together = ['project', 'code']
+        ordering = ['code']
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+
 class LedgerEntry(TimestampedModel):
     project = models.ForeignKey(
         'projects.Project',

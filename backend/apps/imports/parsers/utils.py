@@ -1,83 +1,5 @@
-import csv
-import io
 import random
 from decimal import Decimal, InvalidOperation
-from openpyxl import load_workbook
-
-
-TB_COLUMN_MAP = {
-    'account_code': ['account_code', '科目代码', '科目编码', '科目编号', 'code', '科目号'],
-    'account_name': ['account_name', '科目名称', '科目名', 'name'],
-    'opening_debit': ['opening_debit', '期初借方', '期初借方余额', '年初借方', '期初借'],
-    'opening_credit': ['opening_credit', '期初贷方', '期初贷方余额', '年初贷方', '期初贷'],
-    'period_debit': ['period_debit', '本期借方', '本期借方发生额', '借方发生额', '本期借'],
-    'period_credit': ['period_credit', '本期贷方', '本期贷方发生额', '贷方发生额', '本期贷'],
-    'closing_debit': ['closing_debit', '期末借方', '期末借方余额', '年末借方', '期末借'],
-    'closing_credit': ['closing_credit', '期末贷方', '期末贷方余额', '年末贷方', '期末贷'],
-    'direction': ['direction', '方向', '余额方向', '借贷方向'],
-}
-
-JE_COLUMN_MAP = {
-    'voucher_date': ['voucher_date', '凭证日期', '日期', '记账日期'],
-    'voucher_no': ['voucher_no', '凭证号', '凭证编号', '记字号'],
-    'line_no': ['line_no', '行号', '分录号'],
-    'abstract': ['abstract', '摘要', '说明'],
-    'account_code': ['account_code', '科目代码', '科目编码', '科目编号', 'code'],
-    'account_name': ['account_name', '科目名称', '科目名', 'name'],
-    'debit': ['debit', '借方', '借方金额', 'debit_amount'],
-    'credit': ['credit', '贷方', '贷方金额', 'credit_amount'],
-}
-
-
-def _normalize_columns(columns: list[str], column_map: dict):
-    """Map various column names to standardized keys."""
-    mapping = {}
-    lower_cols = [c.strip().lower().replace(' ', '_') for c in columns]
-    for std_key, variants in column_map.items():
-        for variant in variants:
-            if variant in lower_cols:
-                idx = lower_cols.index(variant)
-                mapping[std_key] = columns[idx]
-                break
-    return mapping
-
-
-def parse_file_to_raw_rows(file_obj, file_name: str):
-    """
-    Parse CSV or Excel file into raw row dicts.
-    Returns {
-        'columns': [...],
-        'rows': [...],
-        'errors': [],
-    }
-    """
-    ext = file_name.split('.')[-1].lower()
-    try:
-        if ext == 'csv':
-            content = file_obj.read().decode('utf-8-sig')
-            reader = csv.DictReader(io.StringIO(content))
-            raw_rows = list(reader)
-            columns = reader.fieldnames or []
-        elif ext in ['xlsx', 'xls']:
-            file_obj.seek(0)
-            wb = load_workbook(file_obj, data_only=True)
-            ws = wb.active
-            columns = [str(cell.value or '') for cell in next(ws.iter_rows(min_row=1, max_row=1))]
-            raw_rows = []
-            for row in ws.iter_rows(min_row=2, values_only=True):
-                raw_rows.append(dict(zip(columns, row)))
-        else:
-            return {'columns': [], 'rows': [], 'errors': [f'不支持的文件格式: {ext}']}
-    except Exception as e:
-        return {'columns': [], 'rows': [], 'errors': [f'文件解析失败: {str(e)}']}
-
-    return {'columns': columns, 'rows': raw_rows, 'errors': []}
-
-
-def guess_column_mapping(columns: list[str], import_type: str):
-    """Guess column mapping based on import type."""
-    col_map = TB_COLUMN_MAP if import_type == 'tb' else JE_COLUMN_MAP
-    return _normalize_columns(columns, col_map)
 
 
 def get_sample_rows(raw_rows: list[dict], count: int = 100, random_samples: int = 10):
@@ -135,6 +57,16 @@ def apply_mapping(raw_rows: list[dict], column_mapping: dict, import_type: str):
             else:
                 direction = ''
 
+            # 多币种字段
+            currency = str(mapped.get('currency', '') or '').strip()
+            foreign_opening_debit = _to_decimal(mapped.get('foreign_opening_debit'))
+            foreign_opening_credit = _to_decimal(mapped.get('foreign_opening_credit'))
+            foreign_period_debit = _to_decimal(mapped.get('foreign_period_debit'))
+            foreign_period_credit = _to_decimal(mapped.get('foreign_period_credit'))
+            foreign_closing_debit = _to_decimal(mapped.get('foreign_closing_debit'))
+            foreign_closing_credit = _to_decimal(mapped.get('foreign_closing_credit'))
+            exchange_rate = _to_decimal(mapped.get('exchange_rate'), default=Decimal('1'))
+
             rows.append({
                 'account_code': account_code,
                 'account_name': account_name,
@@ -145,6 +77,14 @@ def apply_mapping(raw_rows: list[dict], column_mapping: dict, import_type: str):
                 'closing_debit': closing_debit,
                 'closing_credit': closing_credit,
                 'direction': direction,
+                'currency': currency,
+                'foreign_opening_debit': foreign_opening_debit,
+                'foreign_opening_credit': foreign_opening_credit,
+                'foreign_period_debit': foreign_period_debit,
+                'foreign_period_credit': foreign_period_credit,
+                'foreign_closing_debit': foreign_closing_debit,
+                'foreign_closing_credit': foreign_closing_credit,
+                'exchange_rate': exchange_rate,
             })
         else:
             # JE type
@@ -166,6 +106,19 @@ def apply_mapping(raw_rows: list[dict], column_mapping: dict, import_type: str):
             abstract = str(mapped.get('abstract', '') or '').strip()
             account_name = str(mapped.get('account_name', '') or '').strip()
 
+            # 多币种与辅助核算
+            currency = str(mapped.get('currency', '') or '').strip()
+            foreign_debit = _to_decimal(mapped.get('foreign_debit'))
+            foreign_credit = _to_decimal(mapped.get('foreign_credit'))
+            exchange_rate = _to_decimal(mapped.get('exchange_rate'), default=Decimal('1'))
+
+            aux_fields = {}
+            for aux_key in ['department', 'customer', 'supplier']:
+                if aux_key in mapped:
+                    val = str(mapped.get(aux_key, '') or '').strip()
+                    if val:
+                        aux_fields[aux_key] = val
+
             rows.append({
                 'voucher_date': voucher_date,
                 'voucher_no': voucher_no,
@@ -175,6 +128,11 @@ def apply_mapping(raw_rows: list[dict], column_mapping: dict, import_type: str):
                 'account_name': account_name,
                 'debit': debit,
                 'credit': credit,
+                'currency': currency,
+                'foreign_debit': foreign_debit,
+                'foreign_credit': foreign_credit,
+                'exchange_rate': exchange_rate,
+                'aux_fields': aux_fields,
             })
 
     return {'rows': rows, 'errors': errors}
@@ -183,7 +141,16 @@ def apply_mapping(raw_rows: list[dict], column_mapping: dict, import_type: str):
 def _to_decimal(value, default=Decimal('0')):
     if value is None or value == '':
         return default
-    val = str(value).strip().replace(',', '').replace('，', '')
+    val = str(value).strip()
+    # Handle parentheses notation for negative numbers: (1,000.00) => -1000.00
+    is_negative = val.startswith('(') and val.endswith(')')
+    if is_negative:
+        val = val[1:-1]
+    val = val.replace(',', '').replace('，', '')
+    if val == '' or val == '-':
+        return default
+    if is_negative:
+        val = '-' + val
     return Decimal(val or '0')
 
 
