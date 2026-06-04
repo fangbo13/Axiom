@@ -1,12 +1,13 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { Result, Button, Space } from 'antd'
-import { CheckCircleOutlined, FileSearchOutlined, BookOutlined, ReloadOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, FileSearchOutlined, BookOutlined, ReloadOutlined, DashboardOutlined } from '@ant-design/icons'
 
 interface ImportSuccessProps {
   onReset: () => void
+  onGoToDashboard?: () => void
 }
 
-const ImportSuccess = ({ onReset }: ImportSuccessProps) => {
+const ImportSuccess = ({ onReset, onGoToDashboard }: ImportSuccessProps) => {
   const navigate = useNavigate()
   const { projectId } = useParams<{ projectId: string }>()
 
@@ -18,7 +19,14 @@ const ImportSuccess = ({ onReset }: ImportSuccessProps) => {
         title="导入成功"
         subTitle="数据已写入未审财务数据池，试算平衡已更新"
         extra={
-          <Space>
+          <Space wrap className="justify-center">
+            <Button
+              icon={<DashboardOutlined />}
+              onClick={onGoToDashboard}
+              className="rounded-lg"
+            >
+              前往仪表盘
+            </Button>
             <Button
               icon={<BookOutlined />}
               onClick={() => navigate(`/projects/${projectId}/ledger/accounts`)}

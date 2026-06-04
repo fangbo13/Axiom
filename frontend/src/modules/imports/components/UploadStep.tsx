@@ -1,6 +1,5 @@
-import { useState } from 'react'
-import { Upload, Button, Radio, Input, message, Card, Typography, Space } from 'antd'
-import { InboxOutlined, UploadOutlined } from '@ant-design/icons'
+import { Upload, Button, Radio, Input, InputNumber, message, Card, Typography, Space, Alert, Tag } from 'antd'
+import { InboxOutlined, UploadOutlined, WarningOutlined } from '@ant-design/icons'
 import type { UploadProps } from 'antd'
 
 const { Dragger } = Upload
@@ -8,26 +7,44 @@ const { Title, Text } = Typography
 
 interface UploadStepProps {
   uploading: boolean
-  onUpload: (file: File, importType: 'tb' | 'je', overwriteMode: 'append' | 'replace', period: string) => void
+  importType: 'tb' | 'je'
+  overwriteMode: 'append' | 'replace'
+  period: string
+  headerRowHint: number | undefined
+  fileList: any[]
+  existingBatches?: any[]
+  onImportTypeChange: (v: 'tb' | 'je') => void
+  onOverwriteModeChange: (v: 'append' | 'replace') => void
+  onPeriodChange: (v: string) => void
+  onHeaderRowHintChange: (v: number | undefined) => void
+  onFileListChange: (v: any[]) => void
+  onUpload: () => void
 }
 
-const UploadStep = ({ uploading, onUpload }: UploadStepProps) => {
-  const [fileList, setFileList] = useState<any[]>([])
-  const [importType, setImportType] = useState<'tb' | 'je'>('tb')
-  const [overwriteMode, setOverwriteMode] = useState<'append' | 'replace'>('replace')
-  const [period, setPeriod] = useState('')
-
+const UploadStep = ({
+  uploading,
+  importType,
+  overwriteMode,
+  period,
+  headerRowHint,
+  fileList,
+  existingBatches,
+  onImportTypeChange,
+  onOverwriteModeChange,
+  onPeriodChange,
+  onHeaderRowHintChange,
+  onFileListChange,
+  onUpload,
+}: UploadStepProps) => {
   const uploadProps: UploadProps = {
     name: 'file',
     multiple: false,
     fileList,
     beforeUpload: (file) => {
-      const isValid =
-        file.type === 'text/csv' ||
-        file.type === 'application/vnd.ms-excel' ||
-        file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      const ext = file.name.split('.').pop()?.toLowerCase()
+      const isValid = ['csv', 'xlsx', 'xls', 'tsv', 'txt'].includes(ext || '')
       if (!isValid) {
-        message.error('只支持 CSV 或 Excel 文件')
+        message.error('只支持 CSV、TSV、TXT 或 Excel 文件')
         return Upload.LIST_IGNORE
       }
       const isLt50M = file.size / 1024 / 1024 < 50
@@ -37,11 +54,12 @@ const UploadStep = ({ uploading, onUpload }: UploadStepProps) => {
       }
       return false
     },
+    customRequest: () => {},
     onChange: (info) => {
-      setFileList(info.fileList.slice(-1))
+      onFileListChange(info.fileList.slice(-1))
     },
     onRemove: () => {
-      setFileList([])
+      onFileListChange([])
     },
   }
 
@@ -54,8 +72,7 @@ const UploadStep = ({ uploading, onUpload }: UploadStepProps) => {
       message.warning('请输入会计期间')
       return
     }
-    const file = fileList[0].originFileObj || fileList[0]
-    onUpload(file, importType, overwriteMode, period.trim())
+    onUpload()
   }
 
   return (
@@ -72,7 +89,7 @@ const UploadStep = ({ uploading, onUpload }: UploadStepProps) => {
               <Text strong className="block mb-2">导入类型</Text>
               <Radio.Group
                 value={importType}
-                onChange={(e) => setImportType(e.target.value)}
+                onChange={(e) => onImportTypeChange(e.target.value)}
                 buttonStyle="solid"
               >
                 <Radio.Button value="tb">科目余额表 (TB)</Radio.Button>
@@ -84,7 +101,7 @@ const UploadStep = ({ uploading, onUpload }: UploadStepProps) => {
               <Text strong className="block mb-2">覆盖模式</Text>
               <Radio.Group
                 value={overwriteMode}
-                onChange={(e) => setOverwriteMode(e.target.value)}
+                onChange={(e) => onOverwriteModeChange(e.target.value)}
                 buttonStyle="solid"
               >
                 <Radio.Button value="replace">覆盖更新</Radio.Button>
@@ -97,12 +114,50 @@ const UploadStep = ({ uploading, onUpload }: UploadStepProps) => {
               <Input
                 placeholder="例如：2024-12"
                 value={period}
-                onChange={(e) => setPeriod(e.target.value)}
+                onChange={(e) => onPeriodChange(e.target.value)}
               />
+            </div>
+
+            <div className="flex-1 min-w-[200px]">
+              <Text strong className="block mb-2">表头行号（可选，从1开始）</Text>
+              <InputNumber
+                min={1}
+                max={50}
+                placeholder="自动识别"
+                value={headerRowHint}
+                onChange={(val) => onHeaderRowHintChange(val ?? undefined)}
+                className="w-full"
+              />
+              <Text type="secondary" className="text-xs">留空则由系统自动识别，范围 1–50</Text>
             </div>
           </div>
         </Space>
       </Card>
+
+      {existingBatches && existingBatches.length > 0 && (
+        <Alert
+          message="该期间已存在导入记录"
+          description={
+            <div className="space-y-2">
+              <Text>当前期间已有以下已提交版本，继续导入将影响现有数据：</Text>
+              <div className="flex flex-wrap gap-2">
+                {existingBatches.map((b: any) => (
+                  <Tag key={b.id} color={b.is_active ? 'success' : 'default'}>
+                    v{b.version} {b.file_name} {b.is_active ? '(激活)' : ''}
+                  </Tag>
+                ))}
+              </div>
+              <Text type="secondary" className="text-xs">
+                覆盖模式为「覆盖更新」时将停用旧版本；「追加版本」时将保留旧版本。
+              </Text>
+            </div>
+          }
+          type="warning"
+          showIcon
+          icon={<WarningOutlined />}
+          className="rounded-lg mb-6"
+        />
+      )}
 
       <Card className="rounded-xl shadow-card">
         <Dragger
@@ -114,7 +169,7 @@ const UploadStep = ({ uploading, onUpload }: UploadStepProps) => {
           </p>
           <p className="ant-upload-text">点击或拖拽文件到此处上传</p>
           <p className="ant-upload-hint">
-            支持 CSV、Excel (.xlsx, .xls) 格式，文件大小不超过 50MB
+            支持 CSV、TSV、TXT、Excel (.xlsx, .xls) 格式，文件大小不超过 50MB
           </p>
         </Dragger>
 

@@ -1,14 +1,16 @@
 import { useState, useMemo } from 'react'
-import { Table, Select, Card, Typography, Space, Collapse, Tag, Button, Alert } from 'antd'
-import { CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
-import type { PreviewData } from '@/types'
+import { Table, Select, Card, Typography, Space, Collapse, Tag, Button, Alert, Input } from 'antd'
+import { CheckCircleOutlined, ExclamationCircleOutlined, ArrowLeftOutlined, FileTextOutlined } from '@ant-design/icons'
+import type { PreviewData, MappingTemplate } from '@/types'
 
 const { Title, Text } = Typography
 const { Panel } = Collapse
 
 interface PreviewMappingStepProps {
   previewData: PreviewData
-  onConfirmMapping: (mapping: Record<string, string>) => void
+  mappingTemplates: MappingTemplate[]
+  onConfirmMapping: (mapping: Record<string, string>, saveTemplate?: boolean, templateName?: string) => void
+  onBackToUpload: () => void
   loading: boolean
 }
 
@@ -22,6 +24,15 @@ const TB_FIELDS = [
   { key: 'closing_debit', label: '期末借方', required: false },
   { key: 'closing_credit', label: '期末贷方', required: false },
   { key: 'direction', label: '方向', required: false },
+  // 多币种字段
+  { key: 'currency', label: '币种', required: false },
+  { key: 'foreign_opening_debit', label: '原币期初借方', required: false },
+  { key: 'foreign_opening_credit', label: '原币期初贷方', required: false },
+  { key: 'foreign_period_debit', label: '原币本期借方', required: false },
+  { key: 'foreign_period_credit', label: '原币本期贷方', required: false },
+  { key: 'foreign_closing_debit', label: '原币期末借方', required: false },
+  { key: 'foreign_closing_credit', label: '原币期末贷方', required: false },
+  { key: 'exchange_rate', label: '汇率', required: false },
 ]
 
 const JE_FIELDS = [
@@ -33,12 +44,39 @@ const JE_FIELDS = [
   { key: 'account_name', label: '科目名称', required: true },
   { key: 'debit', label: '借方', required: true },
   { key: 'credit', label: '贷方', required: true },
+  // 多币种与辅助核算
+  { key: 'currency', label: '币种', required: false },
+  { key: 'foreign_debit', label: '原币借方', required: false },
+  { key: 'foreign_credit', label: '原币贷方', required: false },
+  { key: 'exchange_rate', label: '汇率', required: false },
+  { key: 'department', label: '部门', required: false },
+  { key: 'customer', label: '客户', required: false },
+  { key: 'supplier', label: '供应商', required: false },
 ]
 
-const PreviewMappingStep = ({ previewData, onConfirmMapping, loading }: PreviewMappingStepProps) => {
+const PreviewMappingStep = ({ previewData, mappingTemplates, onConfirmMapping, onBackToUpload, loading }: PreviewMappingStepProps) => {
   const [mapping, setMapping] = useState<Record<string, string>>(previewData.guessed_mapping || {})
+  const [saveTemplate, setSaveTemplate] = useState(false)
+  const [templateName, setTemplateName] = useState('')
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null)
 
   const fields = previewData.import_type === 'tb' ? TB_FIELDS : JE_FIELDS
+
+  const applicableTemplates = useMemo(() => {
+    return mappingTemplates.filter((t) => t.import_type === previewData.import_type)
+  }, [mappingTemplates, previewData.import_type])
+
+  const handleApplyTemplate = (templateId: number | null) => {
+    setSelectedTemplateId(templateId)
+    if (!templateId) {
+      setMapping(previewData.guessed_mapping || {})
+      return
+    }
+    const tmpl = applicableTemplates.find((t) => t.id === templateId)
+    if (tmpl?.column_mapping) {
+      setMapping(tmpl.column_mapping)
+    }
+  }
 
   const mappedCount = useMemo(() => {
     return fields.filter((f) => mapping[f.key]).length
@@ -90,6 +128,44 @@ const PreviewMappingStep = ({ previewData, onConfirmMapping, loading }: PreviewM
             )}
           </div>
 
+          {previewData.detected_header_row !== undefined && (
+            <Alert
+              message={`系统检测到表头位于第 ${(previewData.detected_header_row ?? 0) + 1} 行，置信度 ${Math.round((previewData.header_confidence ?? 0) * 100)}%`}
+              type="info"
+              showIcon
+              className="rounded-lg"
+            />
+          )}
+
+          {previewData.detected_currencies && previewData.detected_currencies.length > 0 && (
+            <Alert
+              message={`检测到币种：${previewData.detected_currencies.join('、')}`}
+              type="info"
+              showIcon
+              className="rounded-lg"
+            />
+          )}
+
+          {applicableTemplates.length > 0 && (
+            <div className="flex items-center gap-4">
+              <Text strong className="whitespace-nowrap">
+                <FileTextOutlined className="mr-1" />
+                应用映射模板
+              </Text>
+              <Select
+                placeholder="选择已保存的模板"
+                allowClear
+                style={{ width: 280 }}
+                value={selectedTemplateId}
+                onChange={(val) => handleApplyTemplate(val)}
+                options={applicableTemplates.map((t) => ({
+                  label: t.name + (t.is_auto_saved ? ' (自动保存)' : ''),
+                  value: t.id,
+                }))}
+              />
+            </div>
+          )}
+
           {!isReady && (
             <Alert
               message={`必填字段尚有 ${requiredTotal - requiredMapped} 个未映射`}
@@ -120,6 +196,20 @@ const PreviewMappingStep = ({ previewData, onConfirmMapping, loading }: PreviewM
               </div>
             ))}
           </div>
+
+          <div className="flex items-center gap-4 pt-2 border-t border-gray-100">
+            <Button onClick={() => setSaveTemplate(!saveTemplate)}>
+              {saveTemplate ? '取消保存' : '保存为模板'}
+            </Button>
+            {saveTemplate && (
+              <Input
+                placeholder="模板名称"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                className="w-64"
+              />
+            )}
+          </div>
         </Space>
       </Card>
 
@@ -149,13 +239,21 @@ const PreviewMappingStep = ({ previewData, onConfirmMapping, loading }: PreviewM
         </Collapse>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex justify-between">
+        <Button
+          icon={<ArrowLeftOutlined />}
+          onClick={onBackToUpload}
+          size="large"
+          className="rounded-lg"
+        >
+          上一步
+        </Button>
         <Button
           type="primary"
           size="large"
           loading={loading}
           disabled={!isReady}
-          onClick={() => onConfirmMapping(mapping)}
+          onClick={() => onConfirmMapping(mapping, saveTemplate, templateName || undefined)}
           className="rounded-lg"
         >
           确认映射并校验

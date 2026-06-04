@@ -13,7 +13,7 @@ import {
   Spin,
   Empty,
 } from 'antd'
-import { CheckCircleOutlined, DeleteOutlined, HistoryOutlined, PlayCircleOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, DeleteOutlined, HistoryOutlined, PlayCircleOutlined, DashboardOutlined, ExclamationCircleOutlined, WarningOutlined } from '@ant-design/icons'
 import { RootState, AppDispatch } from '@/store'
 import { fetchBatches, setActiveBatch, deleteBatch } from '@/features/imports/importsSlice'
 import type { ImportBatch } from '@/types'
@@ -28,7 +28,7 @@ const VersionManagementPage = () => {
 
   useEffect(() => {
     if (projectId) {
-      dispatch(fetchBatches(Number(projectId)))
+      dispatch(fetchBatches({ projectId: Number(projectId) }))
     }
   }, [dispatch, projectId])
 
@@ -92,6 +92,7 @@ const VersionManagementPage = () => {
           validated: { color: 'orange', text: '已校验' },
           committed: { color: 'success', text: '已入库' },
           failed: { color: 'error', text: '失败' },
+          processing: { color: 'processing', text: '处理中' },
         }
         const s = statusMap[status] || { color: 'default', text: status }
         return <Tag color={s.color}>{s.text}</Tag>
@@ -105,6 +106,28 @@ const VersionManagementPage = () => {
         <Text type="secondary">
           {record.parsed_rows}/{record.total_rows}
         </Text>
+      ),
+    },
+    {
+      title: '问题',
+      key: 'issues',
+      width: 120,
+      render: (_: any, record: ImportBatch) => (
+        <Space size={4}>
+          {record.error_rows_count > 0 && (
+            <Tag color="error" icon={<ExclamationCircleOutlined />}>
+              {record.error_rows_count}
+            </Tag>
+          )}
+          {record.warning_rows_count > 0 && (
+            <Tag color="warning" icon={<WarningOutlined />}>
+              {record.warning_rows_count}
+            </Tag>
+          )}
+          {record.error_rows_count === 0 && record.warning_rows_count === 0 && (
+            <Text type="secondary" className="text-xs">-</Text>
+          )}
+        </Space>
       ),
     },
     {
@@ -152,14 +175,23 @@ const VersionManagementPage = () => {
           <Title level={4} className="!mb-1">导入版本管理</Title>
           <Text type="secondary">查看和管理项目的数据导入历史版本</Text>
         </div>
-        <Button
-          type="primary"
-          icon={<HistoryOutlined />}
-          onClick={() => navigate(`/projects/${projectId}/ledger/import`)}
-          className="rounded-lg"
-        >
-          去导入
-        </Button>
+        <Space>
+          <Button
+            icon={<DashboardOutlined />}
+            onClick={() => navigate(`/projects/${projectId}/ledger/dashboard`)}
+            className="rounded-lg"
+          >
+            仪表盘
+          </Button>
+          <Button
+            type="primary"
+            icon={<HistoryOutlined />}
+            onClick={() => navigate(`/projects/${projectId}/ledger/import`)}
+            className="rounded-lg"
+          >
+            去导入
+          </Button>
+        </Space>
       </div>
 
       <Card className="rounded-xl shadow-card">

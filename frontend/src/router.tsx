@@ -12,6 +12,7 @@ const ProjectListPage = lazy(() => import('@/modules/projects/ProjectListPage'))
 const WorkpaperOverviewPage = lazy(() => import('@/modules/overview/WorkpaperOverviewPage'))
 const ImportPage = lazy(() => import('@/modules/imports/ImportPage'))
 const VersionManagementPage = lazy(() => import('@/modules/imports/VersionManagementPage'))
+const ImportDashboardPage = lazy(() => import('@/modules/imports/ImportDashboardPage'))
 const ChartOfAccountsPage = lazy(() => import('@/modules/ledger/ChartOfAccountsPage'))
 const A300ChecksPage = lazy(() => import('@/modules/a300/A300ChecksPage'))
 const AdminDashboard = lazy(() => import('@/modules/admin/AdminDashboard'))
@@ -89,6 +90,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoader />}>
                 <VersionManagementPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'ledger/dashboard',
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <ImportDashboardPage />
               </Suspense>
             ),
           },

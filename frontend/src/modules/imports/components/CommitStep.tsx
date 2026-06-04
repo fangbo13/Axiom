@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Card, Typography, Radio, Space, Button, Descriptions, Tag, Popconfirm, Alert } from 'antd'
-import { CloudUploadOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
+import { Card, Typography, Radio, Space, Button, Descriptions, Tag, Popconfirm, Alert, Progress } from 'antd'
+import { CloudUploadOutlined, ExclamationCircleOutlined, LoadingOutlined } from '@ant-design/icons'
 import type { PreviewData, ValidationResult } from '@/types'
 
 const { Title, Text } = Typography
@@ -9,10 +9,11 @@ interface CommitStepProps {
   previewData: PreviewData
   validationResult: ValidationResult
   committing: boolean
+  asyncJob: { jobId: string; status: string; progress: number } | null
   onCommit: (mode: 'append' | 'replace') => void
 }
 
-const CommitStep = ({ previewData, validationResult, committing, onCommit }: CommitStepProps) => {
+const CommitStep = ({ previewData, validationResult, committing, asyncJob, onCommit }: CommitStepProps) => {
   const [mode, setMode] = useState<'append' | 'replace'>(previewData.overwrite_mode as 'append' | 'replace')
 
   return (
@@ -65,6 +66,21 @@ const CommitStep = ({ previewData, validationResult, committing, onCommit }: Com
           </Text>
         </Space>
       </Card>
+
+      {asyncJob && asyncJob.status === 'processing' && (
+        <Card className="rounded-xl shadow-card border-blue-200">
+          <Space direction="vertical" className="w-full">
+            <div className="flex items-center gap-2">
+              <LoadingOutlined className="text-primary" />
+              <Text strong>异步导入处理中</Text>
+            </div>
+            <Progress percent={asyncJob.progress} status="active" />
+            <Text type="secondary" className="text-sm">
+              任务 ID: {asyncJob.jobId}，请勿关闭页面，系统将自动刷新状态
+            </Text>
+          </Space>
+        </Card>
+      )}
 
       {!validationResult.is_valid && (
         <Alert
